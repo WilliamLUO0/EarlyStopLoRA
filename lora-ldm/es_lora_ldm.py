@@ -774,7 +774,7 @@ class NetworkTrainer:
             return text_encoder_results, unet_results
 
         training_cs_data = []
-        cs_steps = args.cs_steps
+        cs_interval = args.cs_interval
         window_size = args.window_size
         cs_values_list = []
         ma_cs_values_list = []
@@ -875,7 +875,7 @@ class NetworkTrainer:
                     optimizer.zero_grad(set_to_none=True)
 
                     if args.calculate_cs:
-                        if global_step_counter % cs_steps == 0:
+                        if global_step_counter % cs_interval == 0:
                             te_result, unet_result = compute_cosine_similarity_tensor(accelerator.device, unet, text_encoder, dict(network.named_parameters()))
                             cs = unet_result.mean()
                             cs = cs.detach().cpu().item()
@@ -1169,7 +1169,7 @@ def setup_parser() -> argparse.ArgumentParser:
         help="calculate cosine similarity(cs) and CS fluctuations as training progresses",
     )
     parser.add_argument(
-        "--cs_steps",
+        "--cs_interval",
         type=int,
         default=20,
         help="calculation intervals for CS and CS-Fluctuations",

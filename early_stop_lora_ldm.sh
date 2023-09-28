@@ -117,5 +117,5 @@ python -m accelerate.commands.launch ${launchArgs[@]} --num_cpu_threads_per_proc
   --keep_tokens=$keep_tokens \
   --xformers --shuffle_caption ${extArgs[@]} \
   --calculate_cs \
-  --cs_steps 20 \
+  --cs_interval 20 \
   --window_size 50

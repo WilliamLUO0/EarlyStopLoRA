@@ -45,6 +45,7 @@ from peft.tuners.lora import LoraLayer
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
 from torch.utils.tensorboard import SummaryWriter
 from collections import deque
+from functools import partial
 
 
 def is_ipex_available():
@@ -232,6 +233,7 @@ class TrainingArguments(transformers.Seq2SeqTrainingArguments):
     cs_steps: int = field(default=20, metadata={"help": 'calculation intervals for CS and CS-Fluctuations'})
     window_size: int = field(default=5, metadata={"help": 'window size of moving window average'})
     early_stop: bool = field(default=False, metadata={"help": 'early stop training process base on CS-Fluctuations'})
+    calculate_cs: bool = field(default=True, metadata={"help": 'calculate cs and CS-Fluctuation'})
 
 
 @dataclass
@@ -414,7 +416,7 @@ def get_accelerate_model(args, checkpoint_dir):
             )
             model = get_peft_model(model, config)
 
-    if args.cal_cs:
+    if args.calculate_cs:
         model_origin_weight = {}
         for name, param in model_origin.named_parameters():
             for module_name in modules:
@@ -433,7 +435,7 @@ def get_accelerate_model(args, checkpoint_dir):
                     module = module.to(torch.bfloat16)
 
     print("model:", model)
-    if args.cal_cs:
+    if args.calculate_cs:
         return model, tokenizer, model_origin_weight
     return model, tokenizer
 
@@ -587,8 +589,8 @@ def local_dataset(dataset_name):
     return split_dataset
 
 
-def format_example(example):
-    if example['subject'] == 'computer_security':
+def format_example(example, train_subject):
+    if example['subject'] == train_subject:
         input_text = f"The following are multiple choice questions (with answers) about {example['subject']}.\n\n"
         input_text += example['question'] + '\n'
         for i, choice in enumerate(example['choices']):
@@ -643,12 +645,13 @@ def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
         elif dataset_name == 'vicuna':
             raise NotImplementedError("Vicuna data was not released.")
         elif dataset_name == "mmlu":
-            dataset = load_dataset("data/mmlu/mmlu.py", 'computer_security')
-            test_dataset = dataset['test'].map(format_example,
+            formatted_example = partial(format_example, train_subject=args.train_subject)
+            dataset = load_dataset("data/mmlu/mmlu.py", args.train_subject)
+            test_dataset = dataset['test'].map(formatted_example,
                                                remove_columns=['question', 'subject', 'choices', 'answer'])
-            dev_dataset = dataset['dev'].map(format_example,
+            dev_dataset = dataset['dev'].map(formatted_example,
                                              remove_columns=['question', 'subject', 'choices', 'answer'])
-            validation_dataset = dataset['validation'].map(format_example,
+            validation_dataset = dataset['validation'].map(formatted_example,
                                                            remove_columns=['question', 'subject', 'choices', 'answer'])
             train_dataset = concatenate_datasets([dev_dataset, validation_dataset])
             dataset['train'] = train_dataset
@@ -781,14 +784,13 @@ def train():
     args = argparse.Namespace(
         **vars(model_args), **vars(data_args), **vars(training_args)
     )
-    args.cal_cs = True
     print(args)
 
     checkpoint_dir, completed_training = get_last_checkpoint(args.output_dir)
     if completed_training:
         print('Detected that training was already completed!')
 
-    if args.cal_cs:
+    if args.calculate_cs:
         model, tokenizer, model_origin = get_accelerate_model(args, checkpoint_dir)
     else:
         model, tokenizer = get_accelerate_model(args, checkpoint_dir)
@@ -825,15 +827,15 @@ def train():
             self.early_stop = early_stop
             self.save_at_tp = save_at_tp
             self.weights_queue = deque(maxlen=(3 * window_size - 1))
-            self.save_callback = save_callback
 
     callback_variables = CallbackVariables(args.window_size, False, False)
 
     save_callback = SavePeftModelCallback()
 
     class CosineSimilarityCallback(transformers.TrainerCallback):
-        def __init__(self, callback_variables):
+        def __init__(self, callback_variables, save_callback):
             self.vars = callback_variables
+            self.save_callback = save_callback
 
         @staticmethod
         def compute_cosine_similarity(x, y, batch_size=256):
@@ -901,7 +903,7 @@ def train():
                         diff_values = difference_window(self.vars.ma_cs_values_list)
                         self.vars.diff_values_list.append(diff_values[-1])
 
-                        if len(self.vars.diff_values_list) >= self.vars.indow_size:
+                        if len(self.vars.diff_values_list) >= self.vars.window_size:
                             ma_diff_values = moving_average(self.vars.diff_values_list, self.vars.window_size)
                             self.vars.ma_diff_values_list.append(ma_diff_values[-1])
 
@@ -936,10 +938,10 @@ def train():
                         model.load_state_dict(first_weights['model_state_dict'])
                         print("early stop!")
                         print(f"Turning point is at step: {first_weights['global_step']}")
+                        self.save_callback.save_model(args, state, {'model': model})
 
-                    self.save_callback.save_model(args, state, {'model': model})
-
-                    control.should_training_stop = True
+                    if args.early_stop:
+                        control.should_training_stop = True
 
     trainer.add_callback(CosineSimilarityCallback(callback_variables, save_callback))
 
@@ -970,8 +972,9 @@ def train():
         trainer.add_callback(SavePeftModelCallback)
     if args.do_mmlu_eval:
         if args.dataset == 'mmlu':
-            mmlu_dataset = load_dataset("data/mmlu/mmlu.py", 'computer_security')
-            test_dataset = mmlu_dataset['test'].map(format_example,
+            formatted_example = partial(format_example, train_subject=args.train_subject)
+            mmlu_dataset = load_dataset("data/mmlu/mmlu.py", args.train_subject)
+            test_dataset = mmlu_dataset['test'].map(formatted_example,
                                                     remove_columns=['question', 'subject', 'choices', 'answer'])
             mmlu_dataset['test'] = test_dataset
             # mmlu_dataset = load_dataset("json", data_files={
