@@ -1,1 +1,7 @@
 
+[submodule "sd-scripts"]
+	path = sd-scripts
+	url = https://github.com/kohya-ss/sd-scripts.git
+[submodule "qlora"]
+	path = qlora
+	url = https://github.com/artidoro/qlora.git
