@@ -83,7 +83,7 @@ launchArgs=()
 [ -n "$log_tracker_name" ] && extArgs+=("--log_tracker_name $log_tracker_name")
 [ $lowram ] && extArgs+=("--lowram")
 
-python -m accelerate.commands.launch ${launchArgs[@]} --num_cpu_threads_per_process=8 "./sd-scripts/early_stop_lora.py" \
+python -m accelerate.commands.launch ${launchArgs[@]} --num_cpu_threads_per_process=8 "./sd-scripts/es_lora_ldm.py" \
   --enable_bucket \
   --pretrained_model_name_or_path=$pretrained_model \
   --train_data_dir=$train_data_dir \

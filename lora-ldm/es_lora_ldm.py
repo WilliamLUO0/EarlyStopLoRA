@@ -773,8 +773,6 @@ class NetworkTrainer:
 
             return text_encoder_results, unet_results
 
-        best_cs = None
-        cs_list = []
         training_cs_data = []
         cs_steps = args.cs_steps
         window_size = args.window_size
@@ -987,6 +985,13 @@ class NetworkTrainer:
                                                                                  remove_step_no)
                                 remove_model(remove_ckpt_name)
 
+                            if args.early_stop:
+                                # early stop
+                                print("early stop!")
+                                print(f"Turning point is at step:{weights_to_save['global_step']}")
+                                print(f"Well performing LoRA models are on Epoch {weights_to_save['global_step'] // train_dataset_group.num_train_images +1} and Epoch {weights_to_save['global_step'] // train_dataset_group.num_train_images +2}")
+                                1 / 0
+
                 current_loss = loss.detach().item()
                 if epoch == 0:
                     loss_list.append(current_loss)
@@ -1167,13 +1172,18 @@ def setup_parser() -> argparse.ArgumentParser:
         "--cs_steps",
         type=int,
         default=20,
-        help="calculation intervals for CS and CS fluctuations",
+        help="calculation intervals for CS and CS-Fluctuations",
     )
     parser.add_argument(
         "--window_size",
         type=int,
         default=50,
         help="window size of moving window average",
+    )
+    parser.add_argument(
+        "--early_stop",
+        action="store_true",
+        help="early stop training process base on CS-Fluctuations",
     )
     return parser
 
