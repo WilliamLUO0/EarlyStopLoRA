@@ -1,4 +1,5 @@
-# Modified by xxxxx on 28/8/2023, based on the script by @Akegarasu
+# Modified by xxxxx on 25/9/2023, based on the script by @Akegarasu
+
 # Path & Data Settings
 pretrained_model="./models/Stable-diffusion/xxxxx.safetensors"  # just for an example
 train_data_dir="./train/image_xxx"

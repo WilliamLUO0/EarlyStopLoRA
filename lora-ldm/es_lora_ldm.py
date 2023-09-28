@@ -1,3 +1,5 @@
+# Modified by xxxxx on 25/9/2023, based on the script by @kohya-ss
+
 import importlib
 import argparse
 import gc

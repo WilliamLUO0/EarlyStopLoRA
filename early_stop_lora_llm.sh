@@ -1,4 +1,5 @@
-# Modified by xxxxx on 1/9/2023, based on the script by @artidoro
+# Modified by xxxxx on 25/9/2023, based on the script by @artidoro
+
 python es_lora_llm.py \
     --model_name_or_path huggyllama/llama-7b \
     --output_dir ./college_physics/7b/guanaco-7b \
