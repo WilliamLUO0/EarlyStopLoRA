@@ -1,3 +1,6 @@
 [submodule "lora-ldm"]
 	path = lora-ldm
 	url = https://github.com/kohya-ss/sd-scripts.git
+[submodule "lora-llm"]
+	path = lora-llm
+	url = https://github.com/artidoro/qlora.git
