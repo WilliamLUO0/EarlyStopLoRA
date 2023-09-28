@@ -26,7 +26,7 @@ Firstly, select a base model. Models can be downloaded from the following websit
     - [Hugging Face](https://huggingface.co/)
 
 #### 2. Dataset Preprocessing
-Four datasets are provided under the `Dataset` folder, including real portraits, celebrity stills, landscapes of Queenstown in Auckland, and architectures of the Forbidden City. Then you need to resize or crop the images to the set resolution, e.g. 512*512. After that, we recommend to use Tagger to generate tags for images, such as [SmilingWolf/wd-v1-4-moat-tagger-v2](https://huggingface.co/SmilingWolf/wd-v1-4-moat-tagger-v2), then further manual adjustments are also necessary.
+Four datasets are provided under the `dataset` folder, including real portraits, celebrity stills, landscapes of Queenstown in Auckland, and architectures of the Forbidden City. Then you need to resize or crop the images to the set resolution, e.g. 512*512. After that, we recommend to use Tagger to generate tags for images, such as [SmilingWolf/wd-v1-4-moat-tagger-v2](https://huggingface.co/SmilingWolf/wd-v1-4-moat-tagger-v2), then further manual adjustments are also necessary.
 
 #### 3. Fine-tune LDMs
 Now, place a copy of `es_lora_ldm.py` into `lora-ldm`, you can then train the LoRA model using `early_stop_lora_ldm.sh`! Note that the window size `$M$` is usually set to the length of one epoch, calculated as `number of images * repeat / cs_interval`, where `cs_interval` denotes the number of steps between each computation of cosine similarity and CS-Fluctuation. If you wish to observe the full training process without early stopping, simply omit the --early_stop option.
